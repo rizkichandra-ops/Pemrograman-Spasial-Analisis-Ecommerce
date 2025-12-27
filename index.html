@@ -3,24 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Analisis Penjualan E-Commerce</title>
+    <title>Dashboard Analisis Penjualan</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background-color: #f0f2f5; color: #333; }
-        header { background: #2c3e50; color: white; text-align: center; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; display: flex; flex-direction: column; gap: 30px; }
+        header { background: #2c3e50; color: white; text-align: center; padding: 20px; }
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; display: flex; flex-direction: column; gap: 20px; }
         
+        /* Tombol Interaktif */
+        .btn-toggle {
+            background-color: #3498db; color: white; border: none; padding: 12px 24px;
+            font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer;
+            transition: background 0.3s; margin-bottom: 10px; align-self: center;
+        }
+        .btn-toggle:hover { background-color: #2980b9; }
+
         /* Box Styling */
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        h3 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; }
+        #map { height: 500px; width: 100%; border-radius: 8px; }
         
-        #map { height: 500px; width: 100%; border-radius: 8px; z-index: 1; }
+        /* Sembunyikan grafik secara default */
+        #chartCard { display: none; } 
         .chart-container { height: 400px; position: relative; }
         
-        .legend { background: white; padding: 10px; line-height: 18px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .legend i { width: 14px; height: 14px; float: left; margin-right: 8px; border-radius: 50%; opacity: 0.8; }
+        .legend { background: white; padding: 10px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .legend i { width: 14px; height: 14px; float: left; margin-right: 8px; border-radius: 50%; }
     </style>
 </head>
 <body>
@@ -36,7 +45,9 @@
         <div id="map"></div>
     </div>
 
-    <div class="card">
+    <button class="btn-toggle" onclick="toggleChart()">📊 Tampilkan / Sembunyikan Statistik</button>
+
+    <div class="card" id="chartCard">
         <h3>Top 10 Penjualan Terbesar per Provinsi</h3>
         <div class="chart-container">
             <canvas id="salesChart"></canvas>
@@ -51,14 +62,76 @@
 <script>
     // 1. Inisialisasi Peta
     var map = L.map('map').setView([-2.5, 118], 5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     let statsProvinsi = {};
+    let myChart = null; // Variabel untuk menyimpan objek chart
 
-    // 2. Fungsi Warna Berdasarkan Nilai
-    function getColor(d) {
-        return d > 10000000 ? '#800026' :
-               d > 5000000  ? '#BD0026' :
-               d > 1000000  ? '#E3
+    // 2. Fungsi Toggle Grafik
+    function toggleChart() {
+        var chartCard = document.getElementById("chartCard");
+        if (chartCard.style.display === "none" || chartCard.style.display === "") {
+            chartCard.style.display = "block";
+            // Scroll otomatis ke arah grafik
+            chartCard.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            chartCard.style.display = "none";
+        }
+    }
+
+    // 3. Baca CSV
+    Papa.parse("ecommerce_kabkota_centroid.csv", {
+        download: true,
+        header: true,
+        complete: function(results) {
+            results.data.forEach(row => {
+                if(row.lat && row.lon && row.total_pembayaran) {
+                    const lat = parseFloat(row.lat);
+                    const lon = parseFloat(row.lon);
+                    const penjualan = parseFloat(row.total_pembayaran);
+                    const prov = row.PROVINSI;
+
+                    statsProvinsi[prov] = (statsProvinsi[prov] || 0) + penjualan;
+
+                    L.circleMarker([lat, lon], {
+                        radius: Math.sqrt(penjualan) * 0.02 + 3,
+                        fillColor: "#E31A1C",
+                        color: "#fff",
+                        weight: 1,
+                        fillOpacity: 0.7
+                    }).bindPopup(`<b>${row.KAB_KOTA}</b><br>Rp ${penjualan.toLocaleString('id-ID')}`).addTo(map);
+                }
+            });
+            createChart(); // Siapkan chart di latar belakang
+        }
+    });
+
+    // 4. Inisialisasi Chart.js
+    function createChart() {
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        const sortedLabels = Object.keys(statsProvinsi).sort((a,b) => statsProvinsi[b] - statsProvinsi[a]).slice(0, 10);
+        const sortedValues = sortedLabels.map(label => statsProvinsi[label]);
+
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: sortedLabels,
+                datasets: [{
+                    label: 'Total Penjualan (Rp)',
+                    data: sortedValues,
+                    backgroundColor: '#3498db',
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { ticks: { callback: v => 'Rp ' + v.toLocaleString('id-ID') } }
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>
