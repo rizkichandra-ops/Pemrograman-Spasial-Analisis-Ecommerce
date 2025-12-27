@@ -3,29 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Analisis Penjualan</title>
+    <title>Analisis E-Commerce Indonesia</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background-color: #f0f2f5; color: #333; }
-        header { background: #2c3e50; color: white; text-align: center; padding: 20px; }
-        .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; display: flex; flex-direction: column; gap: 20px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background-color: #f0f2f5; color: #333; overflow-x: hidden; }
         
-        /* Tombol Interaktif */
-        .btn-toggle {
-            background-color: #3498db; color: white; border: none; padding: 12px 24px;
-            font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer;
-            transition: background 0.3s; margin-bottom: 10px; align-self: center;
+        /* 1. Styling Halaman Selamat Datang */
+        #welcome-page {
+            height: 100vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(rgba(44, 62, 80, 0.8), rgba(44, 62, 80, 0.8)), 
+                        url('https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            text-align: center;
+            position: fixed;
+            z-index: 9999;
+            transition: transform 0.8s ease-in-out;
         }
-        .btn-toggle:hover { background-color: #2980b9; }
 
-        /* Box Styling */
+        #welcome-page h1 { font-size: 3rem; margin-bottom: 10px; }
+        #welcome-page p { font-size: 1.2rem; margin-bottom: 30px; max-width: 600px; }
+
+        .btn-start {
+            background-color: #e74c3c; color: white; border: none; padding: 15px 40px;
+            font-size: 1.2rem; font-weight: bold; border-radius: 30px; cursor: pointer;
+            transition: background 0.3s, transform 0.2s;
+        }
+        .btn-start:hover { background-color: #c0392b; transform: scale(1.05); }
+
+        /* 2. Styling Dashboard (Awalnya Tersembunyi) */
+        #main-dashboard { display: none; padding-top: 20px; }
+        
+        header { background: #2c3e50; color: white; text-align: center; padding: 20px; margin-bottom: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 15px; display: flex; flex-direction: column; gap: 20px; }
+        
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         #map { height: 500px; width: 100%; border-radius: 8px; }
         
-        /* Sembunyikan grafik secara default */
-        #chartCard { display: none; } 
+        .btn-toggle {
+            background-color: #3498db; color: white; border: none; padding: 12px 24px;
+            font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer;
+            align-self: center; margin: 10px 0;
+        }
+
+        #chartCard { display: none; margin-top: 20px; }
         .chart-container { height: 400px; position: relative; }
         
         .legend { background: white; padding: 10px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
@@ -34,23 +63,31 @@
 </head>
 <body>
 
-<header>
-    <h1>Dashboard Analisis Penjualan</h1>
-    <p>Visualisasi Geospasial & Statistik Data E-Commerce</p>
-</header>
+<div id="welcome-page">
+    <h1>Selamat Datang</h1>
+    <p>Sistem Informasi Geografis Analisis Penjualan E-Commerce Berdasarkan Data Kabupaten/Kota di Seluruh Indonesia</p>
+    <button class="btn-start" onclick="enterDashboard()">Mulai Analisis</button>
+</div>
 
-<div class="container">
-    <div class="card">
-        <h3>Peta Sebaran Penjualan (Kabupaten/Kota)</h3>
-        <div id="map"></div>
-    </div>
+<div id="main-dashboard">
+    <header>
+        <h1>Dashboard Penjualan Nasional</h1>
+        <p>Visualisasi Centroid Kabupaten/Kota & Statistik Provinsi</p>
+    </header>
 
-    <button class="btn-toggle" onclick="toggleChart()">📊 Tampilkan / Sembunyikan Statistik</button>
+    <div class="container">
+        <div class="card">
+            <h3>Peta Spasial Penjualan</h3>
+            <div id="map"></div>
+        </div>
 
-    <div class="card" id="chartCard">
-        <h3>Top 10 Penjualan Terbesar per Provinsi</h3>
-        <div class="chart-container">
-            <canvas id="salesChart"></canvas>
+        <button class="btn-toggle" onclick="toggleChart()">📊 Lihat Statistik Provinsi</button>
+
+        <div class="card" id="chartCard">
+            <h3>Peringkat Penjualan Per Provinsi</h3>
+            <div class="chart-container">
+                <canvas id="salesChart"></canvas>
+            </div>
         </div>
     </div>
 </div>
@@ -60,26 +97,32 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-    // 1. Inisialisasi Peta
+    // 1. Fungsi Navigasi
+    function enterDashboard() {
+        const welcome = document.getElementById('welcome-page');
+        const dashboard = document.getElementById('main-dashboard');
+        
+        welcome.style.transform = 'translateY(-100%)'; // Geser ke atas
+        setTimeout(() => {
+            welcome.style.display = 'none';
+            dashboard.style.display = 'block';
+            map.invalidateSize(); // Refresh peta agar tampil sempurna setelah hidden
+        }, 800);
+    }
+
+    function toggleChart() {
+        const chartCard = document.getElementById("chartCard");
+        chartCard.style.display = (chartCard.style.display === "none" || chartCard.style.display === "") ? "block" : "none";
+        if(chartCard.style.display === "block") chartCard.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // 2. Inisialisasi Peta
     var map = L.map('map').setView([-2.5, 118], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     let statsProvinsi = {};
-    let myChart = null; // Variabel untuk menyimpan objek chart
 
-    // 2. Fungsi Toggle Grafik
-    function toggleChart() {
-        var chartCard = document.getElementById("chartCard");
-        if (chartCard.style.display === "none" || chartCard.style.display === "") {
-            chartCard.style.display = "block";
-            // Scroll otomatis ke arah grafik
-            chartCard.scrollIntoView({ behavior: 'smooth' });
-        } else {
-            chartCard.style.display = "none";
-        }
-    }
-
-    // 3. Baca CSV
+    // 3. Baca Data CSV
     Papa.parse("ecommerce_kabkota_centroid.csv", {
         download: true,
         header: true,
@@ -94,25 +137,25 @@
                     statsProvinsi[prov] = (statsProvinsi[prov] || 0) + penjualan;
 
                     L.circleMarker([lat, lon], {
-                        radius: Math.sqrt(penjualan) * 0.02 + 3,
-                        fillColor: "#E31A1C",
+                        radius: Math.sqrt(penjualan) * 0.02 + 4,
+                        fillColor: "#e74c3c",
                         color: "#fff",
                         weight: 1,
                         fillOpacity: 0.7
-                    }).bindPopup(`<b>${row.KAB_KOTA}</b><br>Rp ${penjualan.toLocaleString('id-ID')}`).addTo(map);
+                    }).bindPopup(`<b>${row.KAB_KOTA}</b><br>Total: Rp ${penjualan.toLocaleString('id-ID')}`).addTo(map);
                 }
             });
-            createChart(); // Siapkan chart di latar belakang
+            createChart(); //
         }
     });
 
-    // 4. Inisialisasi Chart.js
+    // 4. Inisialisasi Chart
     function createChart() {
         const ctx = document.getElementById('salesChart').getContext('2d');
         const sortedLabels = Object.keys(statsProvinsi).sort((a,b) => statsProvinsi[b] - statsProvinsi[a]).slice(0, 10);
         const sortedValues = sortedLabels.map(label => statsProvinsi[label]);
 
-        myChart = new Chart(ctx, {
+        new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: sortedLabels,
@@ -126,9 +169,7 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: {
-                    y: { ticks: { callback: v => 'Rp ' + v.toLocaleString('id-ID') } }
-                }
+                scales: { y: { ticks: { callback: v => 'Rp ' + v.toLocaleString('id-ID') } } }
             }
         });
     }
