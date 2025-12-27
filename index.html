@@ -8,68 +8,82 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background-color: #f4f4f4; color: #333; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f8f9fa; color: #333; }
         
-        /* 1. Halaman Selamat Datang */
+        /* 1. Page Selamat Datang */
         #welcome-page {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: #2c3e50;
-            color: white;
-            text-align: center;
-            position: fixed;
-            width: 100%;
-            z-index: 9999;
-            transition: 0.8s;
+            height: 100vh; width: 100%; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; background: #2c3e50;
+            color: white; text-align: center; position: fixed; z-index: 10000; transition: 0.8s;
         }
-
         .btn-visit {
             background-color: #27ae60; color: white; border: none; padding: 15px 40px;
-            font-size: 1.2rem; border-radius: 30px; cursor: pointer; margin-top: 20px;
+            font-size: 1.2rem; border-radius: 30px; cursor: pointer; margin-top: 20px; transition: 0.3s;
         }
+        .btn-visit:hover { background-color: #2ecc71; transform: scale(1.05); }
 
-        /* 2. Dashboard (Hidden by default) */
-        #main-dashboard { display: none; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        #map { height: 500px; width: 100%; border-radius: 5px; }
-        .chart-container { height: 400px; }
+        /* 2. Layout Utama & Navigasi */
+        #main-content { display: none; }
+        nav { background: #34495e; padding: 10px; text-align: center; position: sticky; top: 0; z-index: 999; }
+        nav button { 
+            background: none; border: 1px solid white; color: white; padding: 10px 20px; 
+            margin: 0 5px; cursor: pointer; border-radius: 5px; font-weight: bold;
+        }
+        nav button:hover { background: white; color: #34495e; }
 
-        /* 3. Footer / Kredit */
+        .page { display: none; padding: 20px; max-width: 1200px; margin: auto; }
+        .active { display: block; }
+
+        /* 3. Komponen Visual */
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        #map { height: 600px; width: 100%; border-radius: 8px; }
+        .chart-container { height: 500px; width: 100%; }
+
+        /* 4. Legenda Peta */
+        .legend { 
+            background: white; padding: 10px; line-height: 24px; color: #555; 
+            border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.2); 
+        }
+        .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.7; border-radius: 50%; }
+
+        /* 5. Footer */
         footer {
-            text-align: center;
-            padding: 20px;
-            margin-top: 20px;
-            background: #2c3e50;
-            color: white;
-            border-radius: 8px;
+            text-align: center; padding: 30px; background: #2c3e50; color: white; margin-top: 40px;
         }
     </style>
 </head>
 <body>
 
 <div id="welcome-page">
-    <h1>Selamat Datang di Analisis E-Commerce</h1>
-    <p>Visualisasi Data Penjualan Kabupaten/Kota Seluruh Indonesia</p>
+    <h1>Selamat Datang di Portal Analisis</h1>
+    <p>Visualisasi Data Penjualan E-Commerce Seluruh Indonesia</p>
     <button class="btn-visit" onclick="bukaDashboard()">Kunjungi</button>
 </div>
 
-<div id="main-dashboard">
-    <div class="card">
-        <h2>Peta Sebaran Penjualan</h2>
-        <div id="map"></div>
+<div id="main-content">
+    <nav>
+        <button onclick="showPage('peta-page')">📍 Peta Sebaran</button>
+        <button onclick="showPage('grafik-page')">📊 Grafik Statistik</button>
+    </nav>
+
+    <div id="peta-page" class="page active">
+        <div class="card">
+            <h2>Peta Penjualan Kabupaten/Kota</h2>
+            <div id="map"></div>
+        </div>
     </div>
 
-    <div class="card">
-        <h2>Statistik Top 10 Provinsi</h2>
-        <div class="chart-container">
-            <canvas id="salesChart"></canvas>
+    <div id="grafik-page" class="page">
+        <div class="card">
+            <h2>Statistik 10 Provinsi Teratas</h2>
+            <div class="chart-container">
+                <canvas id="salesChart"></canvas>
+            </div>
         </div>
     </div>
 
     <footer>
+        <p>Proyek Analisis Data E-Commerce</p>
         <p>Disusun Oleh:</p>
         <p><b>Rizki Chandra | Damar Wyasa Seta | Rizal Fauzan Rosyadi</b></p>
     </footer>
@@ -80,19 +94,33 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-    // Fungsi pindah halaman
+    // Navigasi
     function bukaDashboard() {
         document.getElementById('welcome-page').style.transform = 'translateY(-100%)';
         setTimeout(() => {
             document.getElementById('welcome-page').style.display = 'none';
-            document.getElementById('main-dashboard').style.display = 'block';
-            map.invalidateSize(); // Perbaikan agar peta tampil pas setelah muncul
+            document.getElementById('main-content').style.display = 'block';
+            map.invalidateSize();
         }, 800);
+    }
+
+    function showPage(pageId) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(pageId).classList.add('active');
+        if(pageId === 'peta-page') map.invalidateSize();
     }
 
     // Inisialisasi Peta
     var map = L.map('map').setView([-2.5, 118], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    // Fungsi Warna
+    function getColor(d) {
+        return d > 10000000 ? '#800026' :
+               d > 5000000  ? '#BD0026' :
+               d > 1000000  ? '#E31A1C' :
+               d > 500000   ? '#FC4E2A' : '#FD8D3C';
+    }
 
     let statsProvinsi = {};
 
@@ -105,24 +133,37 @@
                 if(row.lat && row.lon && row.total_pembayaran) {
                     const lat = parseFloat(row.lat);
                     const lon = parseFloat(row.lon);
-                    const penjualan = parseFloat(row.total_pembayaran);
+                    const val = parseFloat(row.total_pembayaran);
                     const prov = row.PROVINSI;
 
-                    statsProvinsi[prov] = (statsProvinsi[prov] || 0) + penjualan;
+                    statsProvinsi[prov] = (statsProvinsi[prov] || 0) + val;
 
                     L.circleMarker([lat, lon], {
-                        radius: Math.sqrt(penjualan) * 0.02 + 3,
-                        fillColor: "#e74c3c",
-                        color: "#fff",
-                        weight: 1,
-                        fillOpacity: 0.7
-                    }).bindPopup(`<b>${row.KAB_KOTA}</b><br>Rp ${penjualan.toLocaleString('id-ID')}`).addTo(map);
+                        radius: Math.sqrt(val) * 0.02 + 4,
+                        fillColor: getColor(val),
+                        color: "#fff", weight: 1, fillOpacity: 0.7
+                    }).bindPopup(`<b>${row.KAB_KOTA}</b><br>Rp ${val.toLocaleString('id-ID')}`).addTo(map);
                 }
             });
             createChart();
         }
     });
 
+    // Legenda Peta
+    var legend = L.control({position: 'bottomright'});
+    legend.onAdd = function (map) {
+        var div = L.DomUtil.create('div', 'legend'),
+            grades = [0, 500000, 1000000, 5000000, 10000000];
+        div.innerHTML += '<b>Nilai Penjualan</b><br>';
+        for (var i = 0; i < grades.length; i++) {
+            div.innerHTML += '<i style="background:' + getColor(grades[i] + 1) + '"></i> ' +
+                'Rp ' + grades[i].toLocaleString('id-ID') + (grades[i+1] ? '+' : '++') + '<br>';
+        }
+        return div;
+    };
+    legend.addTo(map);
+
+    // Grafik
     function createChart() {
         const ctx = document.getElementById('salesChart').getContext('2d');
         const labels = Object.keys(statsProvinsi).sort((a,b) => statsProvinsi[b] - statsProvinsi[a]).slice(0, 10);
@@ -135,10 +176,15 @@
                 datasets: [{
                     label: 'Total Penjualan (Rp)',
                     data: values,
-                    backgroundColor: '#3498db'
+                    backgroundColor: '#3498db',
+                    borderRadius: 5
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                scales: { y: { ticks: { callback: v => 'Rp ' + v.toLocaleString('id-ID') } } }
+            }
         });
     }
 </script>
